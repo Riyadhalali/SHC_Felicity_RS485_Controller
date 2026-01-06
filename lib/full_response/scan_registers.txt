@@ -1,0 +1,38 @@
+void loop() {
+  uint16_t startAddress = 0x0100;
+  uint8_t totalRegisters = 32;
+  
+  // Read a block of 32 registers
+  uint8_t result = battery.readHoldingRegisters(startAddress, totalRegisters);
+  
+  if (result == battery.ku8MBSuccess) {
+    Serial.println("\n--- Register Scan (0x0100 - 0x011F) ---");
+    Serial.println("ADDR (Hex) | ADDR (Dec) | Value (Dec) | Value (Hex)");
+    Serial.println("---------------------------------------------------");
+    
+    for (int i = 0; i < totalRegisters; i++) {
+      uint16_t addr = startAddress + i;
+      uint16_t val = battery.getResponseBuffer(i);
+      
+      Serial.print("0x");
+      if (addr < 0x100) Serial.print("0");
+      Serial.print(addr, HEX);
+      Serial.print("     | ");
+      Serial.print(addr);
+      Serial.print("      | ");
+      
+      // Handle signed interpretation for potential current registers
+      int16_t signedVal = (int16_t)val;
+      Serial.print(signedVal);
+      
+      Serial.print("\t      | 0x");
+      Serial.println(val, HEX);
+    }
+    Serial.println("---------------------------------------------------");
+  } else {
+    Serial.print("Scan Error: 0x");
+    Serial.println(result, HEX);
+  }
+  
+  delay(5000); // Wait 5 seconds between scans to let you read the data
+}
