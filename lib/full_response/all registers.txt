@@ -1,0 +1,83 @@
+#include <SoftwareSerial.h>
+#include <ModbusMaster.h>
+
+#define MAX485_RX      10
+#define MAX485_TX      11
+#define MAX485_RE_DE   3
+#define BATTERY_ID     1
+
+SoftwareSerial softSerial(MAX485_RX, MAX485_TX);
+ModbusMaster battery;
+
+void preTransmission() {
+  digitalWrite(MAX485_RE_DE, HIGH);
+}
+
+void postTransmission() {
+  digitalWrite(MAX485_RE_DE, LOW);
+}
+
+void setup() {
+  pinMode(MAX485_RE_DE, OUTPUT);
+  digitalWrite(MAX485_RE_DE, LOW);
+
+  Serial.begin(9600);
+  softSerial.begin(9600);
+
+  battery.begin(BATTERY_ID, softSerial);
+  battery.preTransmission(preTransmission);
+  battery.postTransmission(postTransmission);
+
+  Serial.println("=== Felicity LPBF48-100A Battery Monitor ===\n");
+}
+
+void loop() {
+  readBatteryData();
+  delay(2000);
+}
+
+void readBatteryData() {
+  uint8_t result;
+  
+  // Read registers 0x0100 to 0x011F (32 registers)
+  result = battery.readHoldingRegisters(0x0100, 32);
+  
+  if (result == battery.ku8MBSuccess) {
+    // Extract data from buffer (offset = register - 0x0100)
+    float maxChargeVoltage = battery.getResponseBuffer(0x00) / 10.0;   // 0x0100
+    float minVoltage = battery.getResponseBuffer(0x01) / 10.0;         // 0x0101
+    float maxChargeCurrent = battery.getResponseBuffer(0x02) / 10.0;   // 0x0102
+    float maxDischargeCurrent = battery.getResponseBuffer(0x03) / 10.0;// 0x0103
+    
+    float voltage = battery.getResponseBuffer(0x0D) / 10.0;            // 0x010D
+    float soc = battery.getResponseBuffer(0x10) / 10.0;                // 0x0110
+    float soh = battery.getResponseBuffer(0x11) / 10.0;                // 0x0111
+    
+    float temp1 = battery.getResponseBuffer(0x18) / 10.0;              // 0x0118
+    float temp2 = battery.getResponseBuffer(0x1A) / 10.0;              // 0x011A
+    
+    float cell1 = battery.getResponseBuffer(0x19) / 1000.0;            // 0x0119
+    float cell2 = battery.getResponseBuffer(0x1B) / 1000.0;            // 0x011B
+    
+    Serial.println("====== Battery Status ======");
+    Serial.print("Voltage:     "); Serial.print(voltage, 1); Serial.println(" V");
+    Serial.print("SOC:         "); Serial.print(soc, 1); Serial.println(" %");
+    Serial.print("SOH:         "); Serial.print(soh, 1); Serial.println(" %");
+    Serial.println();
+    Serial.print("Temp 1:      "); Serial.print(temp1, 1); Serial.println(" C");
+    Serial.print("Temp 2:      "); Serial.print(temp2, 1); Serial.println(" C");
+    Serial.println();
+    Serial.print("Cell 1:      "); Serial.print(cell1, 3); Serial.println(" V");
+    Serial.print("Cell 2:      "); Serial.print(cell2, 3); Serial.println(" V");
+    Serial.println();
+    Serial.println("------ BMS Limits ------");
+    Serial.print("Max Charge V:   "); Serial.print(maxChargeVoltage, 1); Serial.println(" V");
+    Serial.print("Min Voltage:    "); Serial.print(minVoltage, 1); Serial.println(" V");
+    Serial.print("Max Charge I:   "); Serial.print(maxChargeCurrent, 1); Serial.println(" A");
+    Serial.print("Max Discharge:  "); Serial.print(maxDischargeCurrent, 1); Serial.println(" A");
+    Serial.println("============================\n");
+  } else {
+    Serial.print("Read Error: 0x");
+    Serial.println(result, HEX);
+  }
+}
