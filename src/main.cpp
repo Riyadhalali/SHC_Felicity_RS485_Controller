@@ -7,6 +7,16 @@ Battery RJ45: 5 - 6 pins
 5: B in module 
 6: A in module
 
+
+
+
+connection of max485 to arduino 
+pin 10 -> RO
+pin 11 -> DO
+pin 3 -> de/re 
+
+
+
 Felicity Battery Registers:
 0x010C - Current (signed, /10 for Amps)
 0x010D - Voltage (/10 for Volts)
